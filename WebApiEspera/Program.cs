@@ -1,14 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Runtime.CompilerServices;
 using WebApiEspera.Contexto;
 using WebApiEspera.Models;
+using WebApiEspera.Models.Enum;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = "Data Source=B460M10400\\SQLEXPRESS;Initial Catalog=DBEspera;Integrated Security=False;User ID=userdb;Password=12345678;Connect Timeout=15;Encrypt=False;TrustServerCertificate=False";
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddDbContext<Contexto>
-    (options => options.UseSqlServer
-    (connectionString));
+    (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSwaggerGen();
 
@@ -102,6 +103,51 @@ app.MapPost("ListarSenhas", async (Contexto contexto) =>
     return await contexto.Espera.ToListAsync();
 });
 
+app.MapPost("RelatorioSenha", (Contexto contexto) =>
+{
+    List<Relatorio> rel = contexto.Espera
+                    .GroupJoin(contexto.Atendimento, 
+                    x => x.Id, 
+                    y => y.IdEspera, 
+                    (x, y) => new {X = x, Y = y})
+                    .SelectMany(ab => ab.Y.DefaultIfEmpty(), 
+                        (a, b) => new Relatorio 
+                        { 
+                            Senha = a.X.Id, 
+                            Chamado = a.X.StatusPainel,
+                            DataInicial = a.X.DtEmissao, 
+                            DataFinal = b.DtAtendimento, 
+                            Mesa = b.Mesa,
+                            TipoDeAtendimento = (TipoAtendimento) a.X.TipoAtendimento
+                        }).ToList();
+                        
+    rel.ForEach(r => r.TempoEspera = Relatorio.TempoDeEspera(r.DataInicial, r.DataFinal ?? DateTime.Now));
+
+    return rel;
+});
+
+
+app.MapPost("RelatorioAtendidos", (Contexto contexto) =>
+{
+    List<Relatorio> rel = contexto.Espera
+                    .Join(contexto.Atendimento,
+                    x => x.Id,
+                    y => y.IdEspera,
+                    (x, y) => new { X = x, Y = y })
+                    .Select(result => new Relatorio
+                        {
+                            Senha = result.X.Id,
+                            Chamado = result.X.StatusPainel,
+                            DataInicial = result.X.DtEmissao,
+                            DataFinal = result.Y.DtAtendimento,
+                            Mesa = result.Y.Mesa,
+                            TipoDeAtendimento = (TipoAtendimento) result.X.TipoAtendimento
+                        }).ToList();
+
+    rel.ForEach(r => r.TempoEspera = Relatorio.TempoDeEspera(r.DataInicial, r.DataFinal ?? DateTime.Now));
+
+    return rel;
+});
 
 app.UseSwaggerUI();
 app.Run();
