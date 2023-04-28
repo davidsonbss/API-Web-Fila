@@ -1,8 +1,8 @@
-﻿namespace WebApiEspera.Models.Enum
+﻿namespace WebApiEspera.Models.Enum;
+
+public enum TipoAtendimento
 {
-    public enum TipoAtendimento
-    {
-        Normal = 1,
-        Preferencial = 2
-    }
+    Normal = 1,
+    Preferencial = 2
 }
+

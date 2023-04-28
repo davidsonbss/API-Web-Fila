@@ -83,8 +83,6 @@ app.MapPost("IniciarAtendimento", async (int mesa, Contexto contexto) =>
         return "Senha Normal: " + listaEspera.Id;
         
     }
-    
-    await contexto.SaveChangesAsync();
 });
 
 app.MapPost("ChamarSenha/{id}", async (int id, Contexto contexto) =>
@@ -140,11 +138,10 @@ app.MapPost("RelatorioAtendidos", (Contexto contexto) =>
                             Chamado = result.X.StatusPainel,
                             DataInicial = result.X.DtEmissao,
                             DataFinal = result.Y.DtAtendimento,
+                            TempoEspera = Relatorio.TempoDeEspera(result.X.DtEmissao, result.Y.DtAtendimento),
                             Mesa = result.Y.Mesa,
                             TipoDeAtendimento = (TipoAtendimento) result.X.TipoAtendimento
                         }).ToList();
-
-    rel.ForEach(r => r.TempoEspera = Relatorio.TempoDeEspera(r.DataInicial, r.DataFinal ?? DateTime.Now));
 
     return rel;
 });
